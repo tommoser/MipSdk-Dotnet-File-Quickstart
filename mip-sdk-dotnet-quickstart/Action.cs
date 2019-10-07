@@ -33,6 +33,10 @@ using System.Threading.Tasks;
 using Microsoft.InformationProtection.File;
 using Microsoft.InformationProtection.Exceptions;
 using Microsoft.InformationProtection;
+using Microsoft.Win32;
+using System.Runtime.InteropServices;
+using System.Configuration;
+using Microsoft.InformationProtection.Protection;
 
 namespace MipSdkDotNetQuickstart
 {
@@ -48,6 +52,7 @@ namespace MipSdkDotNetQuickstart
         private IFileProfile profile;
         private IFileEngine engine;
         private MipContext mipContext;
+        private Identity identity;
 
         // Used to pass in options for labeling the file.
         public struct FileOptions
@@ -60,6 +65,9 @@ namespace MipSdkDotNetQuickstart
             public ActionSource ActionSource;
             public bool IsAuditDiscoveryEnabled;
             public bool GenerateChangeAuditEvent;
+            public List<UserRoles> UserRoles;
+            public List<UserRights> UserRights;
+            public string TemplatelId;
         }
 
         /// <summary>
@@ -78,13 +86,21 @@ namespace MipSdkDotNetQuickstart
             MIP.Initialize(MipComponent.File);
 
             // This method in AuthDelegateImplementation triggers auth against Graph so that we can get the user ID.
-            var id = authDelegate.GetUserIdentity();
+            //var id = authDelegate.GetUserIdentity();
+
+            // Prompt one time for a user identity.
+            // This identity is used for service discovery. If MDE SRV record isn't registered properly, we will default to AIP service.
+            Console.WriteLine("The Identity object provides hints on service discovery.");
+            Console.WriteLine("If MDE is properly configured, the mail suffix of the user will be used for discovery.");
+            Console.WriteLine("It will find the MDE record and use the on-prem AD RMS and ADFS for auth.");
+            Console.Write("Enter a user name, either email or UPN: ");
+            identity = new Identity(Console.ReadLine());
 
             // Create profile.
             profile = CreateFileProfile(appInfo, ref authDelegate);
 
             // Create engine providing Identity from authDelegate to assist with service discovery.
-            engine = CreateFileEngine(id);
+            engine = CreateFileEngine(identity);
         }
 
         /// <summary>
@@ -144,7 +160,8 @@ namespace MipSdkDotNetQuickstart
             var engineSettings = new FileEngineSettings("", "", "en-US")
             {
                 // Provide the identity for service discovery.
-                Identity = identity
+                Identity = identity,
+                ProtectionOnlyEngine = true
             };
 
             // Add the IFileEngine to the profile and return.
@@ -232,6 +249,35 @@ namespace MipSdkDotNetQuickstart
             return result;
         }
                 
+        public bool SetProtection(FileOptions options)
+        {
+            var handler = CreateFileHandler(options);
+            ProtectionDescriptor descriptor;
+                
+            if(options.TemplatelId != null)
+            {
+                descriptor = new ProtectionDescriptor(options.TemplatelId);
+            }
+            else
+            {
+                descriptor = new ProtectionDescriptor(options.UserRoles);
+            }
+
+            handler.SetProtection(descriptor, new ProtectionSettings());
+            return handler.CommitAsync(options.OutputName).Result;
+        }
+
+        public IProtectionHandler GetProtectionHandler(FileOptions options)
+        {
+            if (FileHandler.IsProtected(options.FileName, mipContext))
+            {
+                var handler = CreateFileHandler(options);
+                return handler.Protection;
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Read the label from a file provided via FileOptions.
         /// </summary>
