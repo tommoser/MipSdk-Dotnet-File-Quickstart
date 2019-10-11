@@ -60,15 +60,17 @@ namespace MipSdkDotNetQuickstart
         public string AcquireToken(Identity identity, string authority, string resource, string claims)
         {
             try
-            { 
+            {
+
+                bool enableValidation = resource.Contains("aadrm") ? true : false;
                 // Create an auth context using the provided authority and token cache
-                AuthenticationContext authContext = new AuthenticationContext(authority, false, tokenCache);
+                AuthenticationContext authContext = new AuthenticationContext(authority, enableValidation, tokenCache);
                 
                 // Attempt to acquire a token for the given resource, using the ApplicationId, redirectUri, and Identity
                 var result = authContext.AcquireTokenAsync(resource, appInfo.ApplicationId, new Uri(redirectUri), new PlatformParameters(PromptBehavior.Auto), new UserIdentifier(identity.Email, UserIdentifierType.RequiredDisplayableId)).Result;
                 
                 // Return the token. The token is sent to the resource.
-                return result.AccessToken;
+                 return result.AccessToken;
             }
             catch (Exception ex)
             {
