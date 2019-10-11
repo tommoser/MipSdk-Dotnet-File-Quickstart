@@ -119,7 +119,18 @@ namespace MipSdkDotNetQuickstart
                 foreach(var right in protectionHandler.Rights)
                 {
                     Console.WriteLine("Right: {0}", right);
-                }             
+                }
+                Console.WriteLine("Content ID: {0}", protectionHandler.ContentId);
+                Console.WriteLine("Encrypted Data:");
+                foreach(var kvp in protectionHandler.ProtectionDescriptor.EncryptedAppData)
+                {
+                    Console.WriteLine(kvp);
+                }
+                Console.WriteLine("Signed Data:");
+                foreach (var kvp in protectionHandler.ProtectionDescriptor.SignedAppData)
+                {
+                    Console.WriteLine(kvp);
+                }
             }
             Console.WriteLine("Press a key to quit.");
             Console.ReadKey();

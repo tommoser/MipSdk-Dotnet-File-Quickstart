@@ -37,6 +37,7 @@ using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Configuration;
 using Microsoft.InformationProtection.Protection;
+using System.Runtime.ConstrainedExecution;
 
 namespace MipSdkDotNetQuickstart
 {
@@ -261,10 +262,19 @@ namespace MipSdkDotNetQuickstart
             else
             {
                 descriptor = new ProtectionDescriptor(options.UserRoles);
+                var myCustomAppGuid = System.Guid.NewGuid();
+                Console.WriteLine("Using GUID: {0}", myCustomAppGuid.ToString());
+                descriptor.EncryptedAppData = new Dictionary<string, string>();
+                descriptor.EncryptedAppData.Add("customGuid", myCustomAppGuid.ToString());
+
+                descriptor.SignedAppData = new Dictionary<string, string>();
+                descriptor.SignedAppData.Add("customGuid", myCustomAppGuid.ToString());
             }
 
             handler.SetProtection(descriptor, new ProtectionSettings());
-            return handler.CommitAsync(options.OutputName).Result;
+            var result = handler.CommitAsync(options.OutputName).Result;
+
+            return result;
         }
 
         public IProtectionHandler GetProtectionHandler(FileOptions options)
